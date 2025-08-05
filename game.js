@@ -425,64 +425,58 @@ function initInfiniteScroll() {
         const originalCount = resources[type].length;
         let isDragging = false;
         let startX;
+        let startY; // 添加Y坐标跟踪
         let scrollLeft;
+        let initialScrollTop; // 记录初始滚动位置
 
         // 设置初始滚动位置到中间区域的中部，确保左右都有足够空间
         const middleSectionCenter = originalCount * itemWidth + Math.floor(originalCount / 2) * itemWidth;
         inner.scrollLeft = middleSectionCenter;
 
-        // 获取实际索引对应的滚动位置（始终保持在中间区域）
-        function getScrollPositionForIndex(index, type) {
-            const container = document.querySelector(`.panel[data-type="${type}"] .panel-container`);
-            const containerStyle = getComputedStyle(container);
-            const containerWidth = container.clientWidth;
-            const paddingLeft = parseFloat(containerStyle.paddingLeft);
-            const paddingRight = parseFloat(containerStyle.paddingRight);
-            const contentWidth = containerWidth - paddingLeft - paddingRight;
-            const firstItem = document.querySelector(`.panel[data-type="${type}"] .control-item`);
-            if (!firstItem) return index * 120 - (contentWidth - 120) / 2;
-            const itemStyle = getComputedStyle(firstItem);
-            const itemWidth = firstItem.offsetWidth;
-            const marginLeft = parseFloat(itemStyle.marginLeft);
-            const marginRight = parseFloat(itemStyle.marginRight);
-            const itemTotalWidth = itemWidth + marginLeft + marginRight;
-            const centerOffset = (contentWidth / 2 - itemWidth / 2);
-            const maxScrollLeft = Math.max(0, (originalCount * itemTotalWidth) - contentWidth);
-            const targetPosition = index * itemTotalWidth - centerOffset;
-            return Math.max(0, Math.min(targetPosition, maxScrollLeft));
-        }
-
-        // 平滑重置到中间区域（仅用于初始化）
-        function resetToMiddleSection() {
-            const totalWidth = originalCount * itemWidth;
-            // 始终定位到中间区域的开始位置
-            inner.scrollLeft = totalWidth;
-        }
-
-        // 滚动事件监听 - 修复无限滚动边界问题
-        inner.addEventListener('scroll', () => {
-            const totalWidth = originalCount * itemWidth;
-            const currentPos = inner.scrollLeft;
-            
-            // 更精确的边界判断，确保在可见区域内触发滚动循环
-            // 优化边界条件，增加缓冲区防止频繁触发
-            if (currentPos >= totalWidth * 2 - itemWidth * 2) {  // 右侧边界留2个item缓冲
-                requestAnimationFrame(() => {
-                    inner.scrollLeft = currentPos - totalWidth;
-                });
-            } else if (currentPos <= totalWidth) {  // 当滚动到第一份内容区域时（包含边界）
-                requestAnimationFrame(() => {
-                    inner.scrollLeft = currentPos + totalWidth;
-                });
-            }
-        });
-
         // 鼠标拖动功能
+        // 添加鼠标按下事件处理
         panel.addEventListener('mousedown', (e) => {
+            // 仅响应左键点击
+            if (e.button !== 0) return;
             isDragging = true;
             startX = e.pageX - panel.offsetLeft;
+            startY = e.pageY;
             scrollLeft = inner.scrollLeft;
-            panel.style.cursor = 'grabbing';
+            initialScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            e.preventDefault();
+
+            // 添加文档级鼠标释放监听，确保任何位置释放都能结束拖动
+            const handleGlobalMouseUp = () => {
+                if (isDragging) {
+                    isDragging = false;
+                    handleDragEnd();
+                }
+                document.removeEventListener('mouseup', handleGlobalMouseUp);
+            };
+            document.addEventListener('mouseup', handleGlobalMouseUp);
+        });
+
+        panel.addEventListener('mousemove', (e) => {
+            // 确保只有左键按住且处于拖动状态才处理
+            if (!isDragging || e.buttons !== 1) return;
+            e.preventDefault();
+            e.stopPropagation();
+            // 计算水平移动距离
+            const x = e.pageX - panel.offsetLeft;
+            const walk = (startX - x) * 1.0;
+            // 阻止垂直滚动
+            if (Math.abs(e.pageY - startY) > 5) {
+                window.scrollTo(0, initialScrollTop);
+            }
+            inner.scrollLeft = scrollLeft + walk;
+        });
+
+        // 添加鼠标释放和离开事件监听
+        panel.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                handleDragEnd();
+            }
         });
 
         panel.addEventListener('mouseleave', () => {
@@ -490,50 +484,81 @@ function initInfiniteScroll() {
                 isDragging = false;
                 handleDragEnd();
             }
-            panel.style.cursor = 'grab';
         });
 
-        panel.addEventListener('mouseup', () => {
+        panel.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            startX = touch.pageX - panel.offsetLeft;
+            startY = touch.pageY;
+            scrollLeft = inner.scrollLeft;
+            initialScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            // 移除触摸开始时的默认行为阻止
+        });
+
+        panel.addEventListener('touchmove', (e) => {
+            const touch = e.touches[0];
+            const moveX = Math.abs(touch.pageX - startX);
+            const moveY = Math.abs(touch.pageY - startY);
+
+            // 提高触摸拖动阈值到10px，减少微小移动误判
+            if (moveX > 10 || moveY > 10) {
+                if (!isDragging) {
+                    isDragging = true;
+                    e.preventDefault();
+                }
+
+                const x = touch.pageX - panel.offsetLeft;
+                const walk = (startX - x) * 1.0;
+
+                if (Math.abs(touch.pageY - startY) > 5) {
+                    window.scrollTo(0, initialScrollTop);
+                }
+
+                inner.scrollLeft = scrollLeft + walk;
+            }
+        });
+
+        panel.addEventListener('touchend', () => {
             if (isDragging) {
                 isDragging = false;
                 handleDragEnd();
+            } else {
+                // 直接处理触摸点击选择逻辑
+                const touch = e.changedTouches[0];
+                const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+                const target = targetElement.closest('.control-item');
+                if (target) {
+                    const items = Array.from(inner.querySelectorAll('.control-item'));
+                    const index = items.indexOf(target);
+                    if (index !== -1) {
+                        const originalIndex = index % originalCount;
+                        updateSelection(originalIndex);
+                        const containerWidth = inner.clientWidth;
+                        const centeredPos = (containerWidth - itemWidth) / 2;
+                        const targetPosition = originalIndex * itemWidth - centeredPos;
+                        inner.scrollTo({ left: targetPosition, behavior: 'smooth' });
+                    }
+                }
             }
-            panel.style.cursor = 'grab';
         });
 
-        function handleDragEnd() {
-            isDragging = false;
-            const container = document.querySelector(`.panel[data-type="${type}"] .panel-container`);
-            const containerStyle = getComputedStyle(container);
-            const containerWidth = container.clientWidth;
-            const paddingLeft = parseFloat(containerStyle.paddingLeft);
-            const paddingRight = parseFloat(containerStyle.paddingRight);
-            const contentWidth = containerWidth - paddingLeft - paddingRight;
-            const firstItem = document.querySelector(`.panel[data-type="${type}"] .control-item`);
-            if (!firstItem) return;
-            const itemStyle = getComputedStyle(firstItem);
-            const itemWidth = firstItem.offsetWidth;
-            const marginLeft = parseFloat(itemStyle.marginLeft);
-            const marginRight = parseFloat(itemStyle.marginRight);
-            const itemTotalWidth = itemWidth + marginLeft + marginRight;
-            const centerOffset = (contentWidth / 2 - itemWidth / 2);
-            const scrollLeft = container.scrollLeft;
-            const closestIndex = Math.round((scrollLeft + centerOffset) / itemTotalWidth);
-            const validIndex = Math.max(0, Math.min(originalCount - 1, closestIndex));
-            const targetPosition = getScrollPositionForIndex(validIndex, type);
-            container.scrollTo({ left: targetPosition, behavior: 'smooth' });
-            updateSelection(validIndex);
-        }
-
-        panel.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            e.preventDefault();
-            const x = e.pageX - panel.offsetLeft;
-            const walk = (startX - x) * 1.0; // 进一步降低灵敏度
-            inner.scrollLeft = scrollLeft + walk;
+        // 添加点击事件委托处理
+        inner.addEventListener('click', (e) => {
+            const target = e.target.closest('.control-item');
+            if (target) {
+                const items = Array.from(inner.querySelectorAll('.control-item'));
+                const index = items.indexOf(target);
+                if (index !== -1) {
+                    // 计算原始索引（考虑无限滚动的重复项）
+                    const originalIndex = index % originalCount;
+                    updateSelection(originalIndex);
+                    // 直接计算滚动位置（替换已删除的getScrollPositionForIndex）
+                    const containerWidth = inner.clientWidth;
+                    const centeredPos = (containerWidth - itemWidth) / 2;
+                    const targetPosition = originalIndex * itemWidth - centeredPos;
+                    inner.scrollTo({ left: targetPosition, behavior: 'smooth' });
+                }
+            }
         });
-
-        // 设置鼠标样式
-        panel.style.cursor = 'grab';
     });
 }

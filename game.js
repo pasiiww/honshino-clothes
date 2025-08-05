@@ -2,23 +2,21 @@
 const app = new PIXI.Application({
     width: window.innerWidth,
     height: window.innerHeight,
-    backgroundColor: 0xffffff,
+    transparent: true,
     resizeTo: window
 });
 document.getElementById('gameContainer').appendChild(app.view);
 
-// 创建图层容器
-const layers = {
-    background: new PIXI.Container(),
-    foreground: new PIXI.Container(),
-    hair: new PIXI.Container(),
-    body: new PIXI.Container(),
-    clothes: new PIXI.Container()
-};
+// 创建图层容器 (按正确顺序添加到舞台)
+const backgroundContainer = new PIXI.Container();
+app.stage.addChild(backgroundContainer);
 
-// 创建主容器统一管理缩放
+// 创建主容器统一管理人物缩放
 const mainContainer = new PIXI.Container();
 app.stage.addChild(mainContainer);
+
+const foregroundContainer = new PIXI.Container();
+app.stage.addChild(foregroundContainer);
 
 // 图层管理器类
 class LayerManager {
@@ -67,19 +65,12 @@ class LayerManager {
     getLayer(layerName) { return this.layers[layerName]; }
 }
 
-// 创建图层管理器（定义图层顺序）
-const layerOrder = ['background', 'hair', 'body', 'clothes', 'foreground'];
+// 创建图层管理器（定义人物图层顺序）
+const layerOrder = ['hair','body', 'clothes'];
 const layerManager = new LayerManager(layerOrder);
 
 // 添加图层容器到主容器
 mainContainer.addChild(layerManager.container);
-
-// 添加图层到主容器（顺序很重要）
-mainContainer.addChild(layers.background);
-mainContainer.addChild(layers.hair);
-mainContainer.addChild(layers.body);
-mainContainer.addChild(layers.clothes);
-mainContainer.addChild(layers.foreground);
 
 
 
@@ -148,17 +139,31 @@ async function loadInitialResources() {
     mainContainer.pivot.set(bounds.width / 2, 0);
     mainContainer.position.set(app.screen.width / 2, 0);
     
-    // 加载压缩后的背景图
+    // 加载背景图到背景容器
     console.log('Loading background texture: images/background/背景.png');
-    await layerManager.loadResource('background', 'images/background/背景.png');
+    const backgroundTexture = await PIXI.Texture.fromURL('images/background/背景.png');
+    const backgroundSprite = new PIXI.Sprite(backgroundTexture);
+    backgroundSprite.anchor.set(0.5);
+    backgroundSprite.position.set(app.screen.width/2, app.screen.height/2);
+    backgroundSprite.scale.set(Math.min(app.screen.width/backgroundTexture.width, app.screen.height/backgroundTexture.height));
+    backgroundContainer.addChild(backgroundSprite);
 
-    // 加载压缩后的前景图1
+    // 加载前景图到前景容器
     console.log('Loading foreground1 texture: images/background/前景.png');
-    await layerManager.loadResource('foreground', 'images/background/前景.png');
+    const foregroundTexture1 = await PIXI.Texture.fromURL('images/background/前景.png');
+    const foregroundSprite1 = new PIXI.Sprite(foregroundTexture1);
+    foregroundSprite1.anchor.set(0.5);
+    foregroundSprite1.position.set(app.screen.width/2, app.screen.height/2);
+    foregroundSprite1.scale.set(Math.min(app.screen.width/foregroundTexture1.width, app.screen.height/foregroundTexture1.height));
+    foregroundContainer.addChild(foregroundSprite1);
 
-    // 加载压缩后的前景图2
     console.log('Loading foreground2 texture: images/background/前景2.png');
-    await layerManager.loadResource('foreground', 'images/background/前景2.png');
+    const foregroundTexture2 = await PIXI.Texture.fromURL('images/background/前景2.png');
+    const foregroundSprite2 = new PIXI.Sprite(foregroundTexture2);
+    foregroundSprite2.anchor.set(0.5);
+    foregroundSprite2.position.set(app.screen.width/2, app.screen.height/2);
+    foregroundSprite2.scale.set(Math.min(app.screen.width/foregroundTexture2.width, app.screen.height/foregroundTexture2.height));
+    foregroundContainer.addChild(foregroundSprite2);
 
     // 加载身体
     console.log('Loading body texture:', resources.body[0]);
@@ -389,6 +394,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (randomBtn) {
         randomBtn.addEventListener('click', randomDressUp);
     }
+
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const body = document.body;
+    const themeIcon = themeToggleBtn.querySelector('.btn-icon');
+
+    themeToggleBtn.addEventListener('click', () => {
+        body.classList.toggle('dark-mode');
+        
+        // 更新图标和标题
+        if (body.classList.contains('dark-mode')) {
+            themeIcon.textContent = '☀️';
+            themeToggleBtn.title = '切换日间模式';
+        } else {
+            themeIcon.textContent = '🌙';
+            themeToggleBtn.title = '切换夜间模式';
+        }
+    });
 });
 
 // 初始化游戏

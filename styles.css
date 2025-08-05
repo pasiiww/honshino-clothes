@@ -246,3 +246,55 @@ body, html {
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
     text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
 }
+
+/* 主题切换按钮 */
+.theme-toggle-btn {
+    background: linear-gradient(135deg, #89f7fe, #66a6ff);
+    color: white;
+    border: none;
+    padding: 8px;
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(102, 166, 255, 0.5);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.theme-toggle-btn:hover {
+    box-shadow: 0 4px 12px rgba(102, 166, 255, 0.7);
+}
+
+/* 夜间模式 */
+body.dark-mode {
+    background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+}
+
+body.dark-mode .game-title {
+    background: rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-mode .control-panel {
+    background: rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-mode .control-item {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+body.dark-mode .control-item.active {
+    border-color: #00aaff;
+    background-color: rgba(0, 170, 255, 0.15);
+    box-shadow: 0 0 15px rgba(0, 170, 255, 0.5);
+}
+
+body.dark-mode .panel-label {
+    color: #f0f0f0;
+}

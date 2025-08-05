@@ -7,16 +7,9 @@ const app = new PIXI.Application({
 });
 document.getElementById('gameContainer').appendChild(app.view);
 
-// 创建图层容器 (按正确顺序添加到舞台)
-const backgroundContainer = new PIXI.Container();
-app.stage.addChild(backgroundContainer);
-
-// 创建主容器统一管理人物缩放
+// 创建主容器统一管理所有图层缩放
 const mainContainer = new PIXI.Container();
 app.stage.addChild(mainContainer);
-
-const foregroundContainer = new PIXI.Container();
-app.stage.addChild(foregroundContainer);
 
 // 图层管理器类
 class LayerManager {
@@ -47,10 +40,14 @@ class LayerManager {
         sprite.anchor.set(0.5, 0);
         sprite.position.set(0, 0);
         
-        // 计算缩放比例
+        // 所有图层使用完全相同的缩放参数
         const maxWidth = 400, maxHeight = 600;
         const scale = Math.min(maxWidth/texture.width, maxHeight/texture.height) || 1;
         sprite.scale.set(scale);
+        
+        // 所有图层使用相同的锚点设置
+        sprite.anchor.set(0.5, 0);
+        sprite.position.set(0, 0);
         
         layer.addChild(sprite);
         return sprite;
@@ -65,8 +62,8 @@ class LayerManager {
     getLayer(layerName) { return this.layers[layerName]; }
 }
 
-// 创建图层管理器（定义人物图层顺序）
-const layerOrder = ['hair','body', 'clothes'];
+// 创建图层管理器（包含背景、人物、前景的完整图层顺序）
+const layerOrder = ['background', 'hair','body', 'clothes',  'foreground'];
 const layerManager = new LayerManager(layerOrder);
 
 // 添加图层容器到主容器
@@ -139,31 +136,13 @@ async function loadInitialResources() {
     mainContainer.pivot.set(bounds.width / 2, 0);
     mainContainer.position.set(app.screen.width / 2, 0);
     
-    // 加载背景图到背景容器
+    // 加载背景图到LayerManager统一管理
     console.log('Loading background texture: images/background/背景.png');
-    const backgroundTexture = await PIXI.Texture.fromURL('images/background/背景.png');
-    const backgroundSprite = new PIXI.Sprite(backgroundTexture);
-    backgroundSprite.anchor.set(0.5);
-    backgroundSprite.position.set(app.screen.width/2, app.screen.height/2);
-    backgroundSprite.scale.set(Math.min(app.screen.width/backgroundTexture.width, app.screen.height/backgroundTexture.height));
-    backgroundContainer.addChild(backgroundSprite);
+    await layerManager.loadResource('background', 'images/background/背景.png');
 
-    // 加载前景图到前景容器
+    // 加载前景图到LayerManager统一管理
     console.log('Loading foreground1 texture: images/background/前景.png');
-    const foregroundTexture1 = await PIXI.Texture.fromURL('images/background/前景.png');
-    const foregroundSprite1 = new PIXI.Sprite(foregroundTexture1);
-    foregroundSprite1.anchor.set(0.5);
-    foregroundSprite1.position.set(app.screen.width/2, app.screen.height/2);
-    foregroundSprite1.scale.set(Math.min(app.screen.width/foregroundTexture1.width, app.screen.height/foregroundTexture1.height));
-    foregroundContainer.addChild(foregroundSprite1);
-
-    console.log('Loading foreground2 texture: images/background/前景2.png');
-    const foregroundTexture2 = await PIXI.Texture.fromURL('images/background/前景2.png');
-    const foregroundSprite2 = new PIXI.Sprite(foregroundTexture2);
-    foregroundSprite2.anchor.set(0.5);
-    foregroundSprite2.position.set(app.screen.width/2, app.screen.height/2);
-    foregroundSprite2.scale.set(Math.min(app.screen.width/foregroundTexture2.width, app.screen.height/foregroundTexture2.height));
-    foregroundContainer.addChild(foregroundSprite2);
+    await layerManager.loadResource('foreground', 'images/background/前景.png');
 
     // 加载身体
     console.log('Loading body texture:', resources.body[0]);
@@ -417,26 +396,22 @@ document.addEventListener('DOMContentLoaded', () => {
 loadInitialResources();
 initInfiniteScroll();
 
-// 窗口大小调整处理
+// 窗口大小调整函数
 window.addEventListener('resize', () => {
-    if (originalWidth && originalHeight) {
-        // 计算主容器的缩放比例以适应屏幕
-        const targetWidth = app.screen.width * 0.9;
-        const targetHeight = app.screen.height * 0.8;
-        
-        // 找到最大的适合比例
-        const scaleX = targetWidth / originalWidth;
-        const scaleY = targetHeight / originalHeight;
-        const currentScale = Math.min(scaleX, scaleY);
-        
-        console.log('Resize target dimensions:', targetWidth, targetHeight, 'currentScale:', currentScale);
-        
-        // 应用缩放并居中主容器
-        mainContainer.scale.set(currentScale);
-        const bounds = mainContainer.getBounds();
-        mainContainer.pivot.set(bounds.width / 2, 0);
-        mainContainer.position.set(app.screen.width / 2, 0);
-    }
+    app.renderer.resize(window.innerWidth, window.innerHeight);
+    
+    // 重新计算缩放比例
+    const targetWidth = window.innerWidth * 0.9;
+    const targetHeight = window.innerHeight * 0.8;
+    const scaleX = targetWidth / originalWidth;
+    const scaleY = targetHeight / originalHeight;
+    currentScale = Math.min(scaleX, scaleY);
+    mainContainer.scale.set(currentScale);
+    
+    // 重新定位容器
+    const bounds = mainContainer.getBounds();
+    mainContainer.pivot.set(bounds.width / 2, 0);
+    mainContainer.position.set(app.screen.width / 2, 0);
 });
 // 初始化无限滚动 
 function initInfiniteScroll() {

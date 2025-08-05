@@ -334,6 +334,9 @@ function setDefaultMiddleSelection() {
 initInfiniteScroll();
 
 // 加载选中的资源
+// 添加全局变量跟踪是否穿着鲸鱼服装
+let isWearingWhaleClothes = false;
+
 async function loadSelectedResource(type, index) {
     layers[type].removeChildren();
     
@@ -357,6 +360,19 @@ async function loadSelectedResource(type, index) {
         sprite.position.set(0, 0);
         sprite.scale.set(scale);
         layers[type].addChild(sprite);
+        
+        // 检查是否是鲸鱼服装，如果是则隐藏头发
+        if (type === 'clothes') {
+            isWearingWhaleClothes = resources.clothes[index].includes('鲸鱼服装.png');
+            if (layers.hair) {
+                layers.hair.visible = !isWearingWhaleClothes;
+            }
+        } else if (type === 'hair') {
+            // 加载头发时也检查当前服装状态
+            if (layers.hair) {
+                layers.hair.visible = !isWearingWhaleClothes;
+            }
+        }
     } catch (error) {
         console.error(`Failed to load ${type} resource at index ${index}:`, error);
     }
@@ -407,27 +423,8 @@ document.addEventListener('click', async (e) => {
         
         panelInner.scrollTo({ left: nearestPos, behavior: 'smooth' });
         
-        // 清空当前图层并加载新资源
-        layers[type].removeChildren();
-        const texture = await PIXI.Texture.fromURL(resources[type][clickedIndex]);
-        const sprite = new PIXI.Sprite(texture);
-        
-        // 计算缩放比例，确保图片完全显示
-        const imgAspect = texture.width / texture.height;
-        const maxWidth = 400; // 最大宽度限制
-        const maxHeight = 600; // 最大高度限制
-        
-        let scale = 1;
-        if (texture.width > maxWidth || texture.height > maxHeight) {
-            const scaleX = maxWidth / texture.width;
-            const scaleY = maxHeight / texture.height;
-            scale = Math.min(scaleX, scaleY);
-        }
-        
-        sprite.anchor.set(0.5, 0);
-        sprite.position.set(0, 0);
-        sprite.scale.set(scale);
-        layers[type].addChild(sprite);
+        // 调用loadSelectedResource函数加载资源，确保鲸鱼服装逻辑执行
+        loadSelectedResource(type, clickedIndex);
     }
 });
 

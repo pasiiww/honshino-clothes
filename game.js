@@ -20,6 +20,60 @@ const layers = {
 const mainContainer = new PIXI.Container();
 app.stage.addChild(mainContainer);
 
+// 图层管理器类
+class LayerManager {
+    constructor(layerOrder) {
+        this.layers = {};
+        this.container = new PIXI.Container();
+        this.layerOrder = layerOrder;
+        
+        // 初始化所有图层
+        layerOrder.forEach(layerName => {
+            this.layers[layerName] = new PIXI.Container();
+            this.container.addChild(this.layers[layerName]);
+        });
+    }
+    
+    // 加载资源到指定图层
+    async loadResource(layerName, resourceUrl) {
+        const layer = this.layers[layerName];
+        if (!layer) return null;
+        
+        // 清空现有内容
+        layer.removeChildren();
+        
+        const texture = await PIXI.Texture.fromURL(resourceUrl);
+        const sprite = new PIXI.Sprite(texture);
+        
+        // 设置统一的精灵属性
+        sprite.anchor.set(0.5, 0);
+        sprite.position.set(0, 0);
+        
+        // 计算缩放比例
+        const maxWidth = 400, maxHeight = 600;
+        const scale = Math.min(maxWidth/texture.width, maxHeight/texture.height) || 1;
+        sprite.scale.set(scale);
+        
+        layer.addChild(sprite);
+        return sprite;
+    }
+    
+    // 控制图层可见性
+    setLayerVisibility(layerName, visible) {
+        if (this.layers[layerName]) this.layers[layerName].visible = visible;
+    }
+    
+    // 获取图层
+    getLayer(layerName) { return this.layers[layerName]; }
+}
+
+// 创建图层管理器（定义图层顺序）
+const layerOrder = ['background', 'hair', 'body', 'clothes', 'foreground'];
+const layerManager = new LayerManager(layerOrder);
+
+// 添加图层容器到主容器
+mainContainer.addChild(layerManager.container);
+
 // 添加图层到主容器（顺序很重要）
 mainContainer.addChild(layers.background);
 mainContainer.addChild(layers.hair);
@@ -95,142 +149,28 @@ async function loadInitialResources() {
     mainContainer.position.set(app.screen.width / 2, 0);
     
     // 加载压缩后的背景图
-    try {
-        console.log('Loading compressed background texture: images/background/背景.png');
-        const bgTexture = await PIXI.Texture.fromURL('images/background/背景.png');
-        const bgSprite = new PIXI.Sprite(bgTexture);
-        bgSprite.anchor.set(0.5, 0); // 底部居中锚点，与角色对齐
-        bgSprite.position.set(0, 0);
-        bgSprite.scale.set(1); // 使用压缩后的原始大小
-        layers.background.addChild(bgSprite);
-        console.log('Compressed background sprite loaded successfully');
-    } catch (error) {
-        console.error('Failed to load compressed background texture:', error);
-        // 如果压缩图片加载失败，使用原始图片
-        try {
-            const bgTexture = await PIXI.Texture.fromURL('images/background/背景.png');
-            const bgSprite = new PIXI.Sprite(bgTexture);
-            bgSprite.anchor.set(0.5, 0); // 底部居中锚点，与角色对齐
-        bgSprite.position.set(0, 0);
-        bgSprite.scale.set(0.5);
-            layers.background.addChild(bgSprite);
-        } catch (fallbackError) {
-            console.error('Failed to load fallback background texture:', fallbackError);
-        }
-    }
+    console.log('Loading background texture: images/background/背景.png');
+    await layerManager.loadResource('background', 'images/background/背景.png');
 
     // 加载压缩后的前景图1
-    try {
-        console.log('Loading compressed foreground1 texture: images/background/前景.png');
-        const fg1Texture = await PIXI.Texture.fromURL('images/background/前景.png');
-        const fg1Sprite = new PIXI.Sprite(fg1Texture);
-        fg1Sprite.anchor.set(0.5, 0); // 底部居中锚点，与角色对齐
-        fg1Sprite.position.set(0, 0);
-        fg1Sprite.scale.set(1); // 使用压缩后的原始大小
-        layers.foreground.addChild(fg1Sprite);
-        console.log('Compressed foreground1 sprite loaded successfully');
-    } catch (error) {
-        console.error('Failed to load compressed foreground1 texture:', error);
-        // 如果压缩图片加载失败，使用原始图片
-        try {
-            const fg1Texture = await PIXI.Texture.fromURL('images/background/前景.png');
-            const fg1Sprite = new PIXI.Sprite(fg1Texture);
-            fg1Sprite.anchor.set(0.5, 0); // 底部居中锚点，与角色对齐
-        fg1Sprite.position.set(0, 0);
-        fg1Sprite.scale.set(0.5);
-            layers.foreground.addChild(fg1Sprite);
-        } catch (fallbackError) {
-            console.error('Failed to load fallback foreground1 texture:', fallbackError);
-        }
-    }
+    console.log('Loading foreground1 texture: images/background/前景.png');
+    await layerManager.loadResource('foreground', 'images/background/前景.png');
 
     // 加载压缩后的前景图2
-    try {
-        console.log('Loading compressed foreground2 texture: images/background/前景2.png');
-        const fg2Texture = await PIXI.Texture.fromURL('images/background/前景2.png');
-        const fg2Sprite = new PIXI.Sprite(fg2Texture);
-        fg2Sprite.anchor.set(0.5, 0); // 底部居中锚点，与角色对齐
-        fg2Sprite.position.set(0, 0);
-        fg2Sprite.scale.set(1); // 使用压缩后的原始大小
-        layers.foreground.addChild(fg2Sprite);
-        console.log('Compressed foreground2 sprite loaded successfully');
-    } catch (error) {
-        console.error('Failed to load compressed foreground2 texture:', error);
-        // 如果压缩图片加载失败，使用原始图片
-        try {
-            const fg2Texture = await PIXI.Texture.fromURL('images/background/前景2.png');
-            const fg2Sprite = new PIXI.Sprite(fg2Texture);
-            fg2Sprite.anchor.set(0.5, 0); // 底部居中锚点，与角色对齐
-        fg2Sprite.position.set(0, 0);
-        fg2Sprite.scale.set(0.5);
-            layers.foreground.addChild(fg2Sprite);
-        } catch (fallbackError) {
-            console.error('Failed to load fallback foreground2 texture:', fallbackError);
-        }
-    }
+    console.log('Loading foreground2 texture: images/background/前景2.png');
+    await layerManager.loadResource('foreground', 'images/background/前景2.png');
 
     // 加载身体
-    try {
-        console.log('Loading body texture:', resources.body[0]);
-        const bodyTexture = await PIXI.Texture.fromURL(resources.body[0]);
-        const bodySprite = new PIXI.Sprite(bodyTexture);
-        bodySprite.anchor.set(0.5, 0);
-        bodySprite.position.set(0, 0);
-        bodySprite.scale.set(1);
-        layers.body.addChild(bodySprite);
-        console.log('Body sprite loaded successfully');
-    } catch (error) {
-        console.error('Failed to load body texture:', error);
-        // 创建红色占位矩形作为 fallback
-        const fallback = new PIXI.Graphics();
-        fallback.beginFill(0xff0000);
-        fallback.drawRect(-100, -200, 200, 400); // 增大 fallback 尺寸
-        fallback.endFill();
-        layers.body.addChild(fallback);
-        console.log('Body fallback added, mainContainer scale:', mainContainer.scale.x);
-    }
+    console.log('Loading body texture:', resources.body[0]);
+    await layerManager.loadResource('body', resources.body[0]);
 
     // 加载头发
-    try {
-        console.log('Loading hair texture:', resources.hair[0]);
-        const hairTexture = await PIXI.Texture.fromURL(resources.hair[0]);
-        const hairSprite = new PIXI.Sprite(hairTexture);
-        hairSprite.anchor.set(0.5, 0);
-        hairSprite.position.set(0, 0);
-        hairSprite.scale.set(1);
-        layers.hair.addChild(hairSprite);
-        console.log('Hair sprite loaded successfully');
-    } catch (error) {
-        console.error('Failed to load hair texture:', error);
-        // 创建绿色占位矩形作为 fallback
-        const fallback = new PIXI.Graphics();
-        fallback.beginFill(0x00ff00);
-        fallback.drawRect(-100, -200, 200, 400); // 增大 fallback 尺寸
-        fallback.endFill();
-        layers.hair.addChild(fallback);
-        console.log('Hair fallback added, mainContainer position:', mainContainer.position);
-    }
+    console.log('Loading hair texture:', resources.hair[0]);
+    await layerManager.loadResource('hair', resources.hair[0]);
 
     // 加载衣服
-    try {
-        console.log('Loading clothes texture:', resources.clothes[0]);
-        const clothesTexture = await PIXI.Texture.fromURL(resources.clothes[0]);
-        const clothesSprite = new PIXI.Sprite(clothesTexture);
-        clothesSprite.anchor.set(0.5, 0);
-        clothesSprite.position.set(0, 0);
-        clothesSprite.scale.set(1);
-        layers.clothes.addChild(clothesSprite);
-        console.log('Clothes sprite loaded successfully');
-    } catch (error) {
-        console.error('Failed to load clothes texture:', error);
-        // 创建蓝色占位矩形作为 fallback
-        const fallback = new PIXI.Graphics();
-        fallback.beginFill(0x0000ff);
-        fallback.drawRect(-100, -200, 200, 400); // 增大 fallback 尺寸
-        fallback.endFill();
-        layers.clothes.addChild(fallback);
-        console.log('Clothes fallback added, mainContainer pivot:', mainContainer.pivot);
-    }
+    console.log('Loading clothes texture:', resources.clothes[0]);
+    await layerManager.loadResource('clothes', resources.clothes[0]);
 
  
 
@@ -338,43 +278,16 @@ initInfiniteScroll();
 let isWearingWhaleClothes = false;
 
 async function loadSelectedResource(type, index) {
-    layers[type].removeChildren();
+    // 调用图层管理器加载资源
+    await layerManager.loadResource(type, resources[type][index]);
     
-    try {
-        const texture = await PIXI.Texture.fromURL(resources[type][index]);
-        const sprite = new PIXI.Sprite(texture);
-        
-        // 计算缩放比例，确保图片完全显示
-        const imgAspect = texture.width / texture.height;
-        const maxWidth = 400; // 最大宽度限制
-        const maxHeight = 600; // 最大高度限制
-        
-        let scale = 1;
-        if (texture.width > maxWidth || texture.height > maxHeight) {
-            const scaleX = maxWidth / texture.width;
-            const scaleY = maxHeight / texture.height;
-            scale = Math.min(scaleX, scaleY);
-        }
-        
-        sprite.anchor.set(0.5, 0);
-        sprite.position.set(0, 0);
-        sprite.scale.set(scale);
-        layers[type].addChild(sprite);
-        
-        // 检查是否是鲸鱼服装，如果是则隐藏头发
-        if (type === 'clothes') {
-            isWearingWhaleClothes = resources.clothes[index].includes('鲸鱼服装.png');
-            if (layers.hair) {
-                layers.hair.visible = !isWearingWhaleClothes;
-            }
-        } else if (type === 'hair') {
-            // 加载头发时也检查当前服装状态
-            if (layers.hair) {
-                layers.hair.visible = !isWearingWhaleClothes;
-            }
-        }
-    } catch (error) {
-        console.error(`Failed to load ${type} resource at index ${index}:`, error);
+    // 检查是否是鲸鱼服装，如果是则隐藏头发
+    if (type === 'clothes') {
+        isWearingWhaleClothes = resources.clothes[index].includes('鲸鱼服装.png');
+        layerManager.setLayerVisibility('hair', !isWearingWhaleClothes);
+    } else if (type === 'hair') {
+        // 加载头发时也检查当前服装状态
+        layerManager.setLayerVisibility('hair', !isWearingWhaleClothes);
     }
 }
 
@@ -519,9 +432,24 @@ function initInfiniteScroll() {
         inner.scrollLeft = middleSectionCenter;
 
         // 获取实际索引对应的滚动位置（始终保持在中间区域）
-        function getScrollPositionForIndex(index) {
-            const totalWidth = originalCount * itemWidth;
-            return totalWidth + index * itemWidth; // 始终返回中间区域的位置
+        function getScrollPositionForIndex(index, type) {
+            const container = document.querySelector(`.panel[data-type="${type}"] .panel-container`);
+            const containerStyle = getComputedStyle(container);
+            const containerWidth = container.clientWidth;
+            const paddingLeft = parseFloat(containerStyle.paddingLeft);
+            const paddingRight = parseFloat(containerStyle.paddingRight);
+            const contentWidth = containerWidth - paddingLeft - paddingRight;
+            const firstItem = document.querySelector(`.panel[data-type="${type}"] .control-item`);
+            if (!firstItem) return index * 120 - (contentWidth - 120) / 2;
+            const itemStyle = getComputedStyle(firstItem);
+            const itemWidth = firstItem.offsetWidth;
+            const marginLeft = parseFloat(itemStyle.marginLeft);
+            const marginRight = parseFloat(itemStyle.marginRight);
+            const itemTotalWidth = itemWidth + marginLeft + marginRight;
+            const centerOffset = (contentWidth / 2 - itemWidth / 2);
+            const maxScrollLeft = Math.max(0, (originalCount * itemTotalWidth) - contentWidth);
+            const targetPosition = index * itemTotalWidth - centerOffset;
+            return Math.max(0, Math.min(targetPosition, maxScrollLeft));
         }
 
         // 平滑重置到中间区域（仅用于初始化）
@@ -574,54 +502,27 @@ function initInfiniteScroll() {
         });
 
         function handleDragEnd() {
-            const currentPos = inner.scrollLeft;
-            const totalWidth = originalCount * itemWidth;
-            const itemIndex = Math.round(currentPos / itemWidth);
-            
-            // 计算实际索引
-            const actualIndex = ((itemIndex % originalCount) + originalCount) % originalCount;
-            
-            if (actualIndex >= 0 && actualIndex < originalCount) {
-                // 计算居中的滚动位置（考虑面板容器的中心）
-                // 使用clientWidth获取实际可见宽度，排除边框和滚动条
-                // 使用容器宽度而非面板宽度计算居中
-                // 获取容器宽度并排除内边距影响
-                // 使用getBoundingClientRect获取更精确的容器宽度
-                // 获取容器宽度并排除内边距
-                const container = panel.querySelector('.panel-container');
-                const containerStyle = getComputedStyle(container);
-                const containerRect = container.getBoundingClientRect();
-                const containerPadding = parseFloat(containerStyle.paddingLeft) + parseFloat(containerStyle.paddingRight);
-                const containerWidth = containerRect.width - containerPadding;
-                // 计算item总宽度（包含margin）
-                const itemTotalWidth = 76; // 明确设置包含margin的总宽度
-                // 精确计算居中位置，考虑所有视觉因素
-                const centeredPos = actualIndex * itemWidth + (itemWidth / 2) - (containerWidth / 2);
-                
-                // 找到所有可能的居中位置（前中后三个区域）
-                const positions = [
-                    centeredPos + totalWidth,  // 中间区域居中
-                    centeredPos,                 // 前面区域居中
-                    centeredPos + totalWidth * 2  // 后面区域居中
-                ];
-                
-                // 选择距离当前位置最近的居中位置（最短距离滚动）
-                const distances = positions.map(pos => Math.abs(pos - currentPos));
-                const nearestPos = positions[distances.indexOf(Math.min(...distances))];
-                
-                inner.scrollTo({ left: nearestPos, behavior: 'smooth' });
-                
-                // 更新选中状态
-                const items = document.querySelectorAll(`.control-item[data-type="${type}"]`);
-                items.forEach((item, idx) => {
-                    const idxInOriginal = idx % originalCount;
-                    item.classList.toggle('active', idxInOriginal === actualIndex);
-                });
-                
-                // 更新当前选择
-                currentSelection[type] = actualIndex;
-                loadSelectedResource(type, actualIndex);
-            }
+            isDragging = false;
+            const container = document.querySelector(`.panel[data-type="${type}"] .panel-container`);
+            const containerStyle = getComputedStyle(container);
+            const containerWidth = container.clientWidth;
+            const paddingLeft = parseFloat(containerStyle.paddingLeft);
+            const paddingRight = parseFloat(containerStyle.paddingRight);
+            const contentWidth = containerWidth - paddingLeft - paddingRight;
+            const firstItem = document.querySelector(`.panel[data-type="${type}"] .control-item`);
+            if (!firstItem) return;
+            const itemStyle = getComputedStyle(firstItem);
+            const itemWidth = firstItem.offsetWidth;
+            const marginLeft = parseFloat(itemStyle.marginLeft);
+            const marginRight = parseFloat(itemStyle.marginRight);
+            const itemTotalWidth = itemWidth + marginLeft + marginRight;
+            const centerOffset = (contentWidth / 2 - itemWidth / 2);
+            const scrollLeft = container.scrollLeft;
+            const closestIndex = Math.round((scrollLeft + centerOffset) / itemTotalWidth);
+            const validIndex = Math.max(0, Math.min(originalCount - 1, closestIndex));
+            const targetPosition = getScrollPositionForIndex(validIndex, type);
+            container.scrollTo({ left: targetPosition, behavior: 'smooth' });
+            updateSelection(validIndex);
         }
 
         panel.addEventListener('mousemove', (e) => {

@@ -1,1 +1,1 @@
-terser game.js -o game.min.js 
+terser game.js -o game.min.js --compress drop_console=true

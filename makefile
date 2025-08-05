@@ -1,0 +1,1 @@
+terser game.js -o game.min.js 

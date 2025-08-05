@@ -176,6 +176,7 @@ async function loadInitialResources() {
 
     // 更新控制面板预览图
     updateControlPanelPreviews();
+    setDefaultMiddleSelection();
 }
 
 // 读取DLC文件内容并构建DLC项目列表
@@ -237,8 +238,7 @@ function generateControlPanels() {
 // 更新控制面板预览图
 async function updateControlPanelPreviews() {
     generateControlPanels();
-    // 设置默认中间选中项
-    setDefaultMiddleSelection();
+    
 }
 
 // 设置默认选中中间项
@@ -255,7 +255,9 @@ function setDefaultMiddleSelection() {
         
         // 滚动到中间区域（第二份）的对应位置
         const panelInner = document.querySelector(`#${type}Panel .panel-inner`);
-        const scrollPosition = count * itemWidth + middleIndex * itemWidth; // 中间区域
+        const totalWidth = count * itemWidth;
+        const centeredPos = middleIndex * itemWidth + (itemWidth / 2) - (panelInner.offsetWidth / 2);
+        const scrollPosition = centeredPos + totalWidth;
         panelInner.scrollLeft = scrollPosition;
         
         // 更新选中状态
@@ -270,8 +272,6 @@ function setDefaultMiddleSelection() {
     });
 }
 
-// 初始化无限滚动
-initInfiniteScroll();
 
 // 加载选中的资源
 // 添加全局变量跟踪是否穿着鲸鱼服装
@@ -315,7 +315,7 @@ document.addEventListener('click', async (e) => {
         // 滚动到选中项（居中显示）
         const panelInner = e.target.closest('.panel-inner');
         const panel = panelInner.closest('.control-panel');
-        const itemWidth = 60 + 16; // 更新为新的控制项尺寸：60px + 16px间距
+        const itemWidth = 60 +16; // 更新为新的控制项尺寸：60px + 16px间距
         const totalWidth = originalCount * itemWidth;
         const currentPos = panelInner.scrollLeft;
         
@@ -334,7 +334,7 @@ document.addEventListener('click', async (e) => {
         const distances = positions.map(pos => Math.abs(pos - currentPos));
         const nearestPos = positions[distances.indexOf(Math.min(...distances))];
         
-        panelInner.scrollTo({ left: nearestPos, behavior: 'smooth' });
+        panelInner.scrollTo({ left: nearestPos + 50 , behavior: 'smooth' });
         
         // 调用loadSelectedResource函数加载资源，确保鲸鱼服装逻辑执行
         loadSelectedResource(type, clickedIndex);
@@ -393,6 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 初始化游戏
 loadInitialResources();
+initInfiniteScroll();
 
 // 窗口大小调整处理
 window.addEventListener('resize', () => {
@@ -415,149 +416,38 @@ window.addEventListener('resize', () => {
         mainContainer.position.set(app.screen.width / 2, 0);
     }
 });
-// 初始化无限滚动 - 最终优化版本
+// 初始化无限滚动 
 function initInfiniteScroll() {
     const panels = ['body', 'clothes', 'hair'];
     panels.forEach(type => {
-        const panel = document.getElementById(`${type}Panel`);
-        const inner = panel.querySelector('.panel-inner');
-        const itemWidth = 60 + 16; // 更新为新的控制项尺寸：60px + 16px间距
+        const panelInner = document.querySelector(`#${type}Panel .panel-inner`);
+        if (!panelInner) return;
+
         const originalCount = resources[type].length;
-        let isDragging = false;
-        let startX;
-        let startY; // 添加Y坐标跟踪
-        let scrollLeft;
-        let initialScrollTop; // 记录初始滚动位置
+        if (originalCount === 0) return;
 
-        // 设置初始滚动位置到中间区域的中部，确保左右都有足够空间
-        const middleSectionCenter = originalCount * itemWidth + Math.floor(originalCount / 2) * itemWidth;
-        inner.scrollLeft = middleSectionCenter;
+        const itemWidth = 60 + 16; // item width + margin
+        const contentWidth = originalCount * itemWidth;
 
-        // 鼠标拖动功能
-        // 添加鼠标按下事件处理
-        panel.addEventListener('mousedown', (e) => {
-            // 仅响应左键点击
-            if (e.button !== 0) return;
-            isDragging = true;
-            startX = e.pageX - panel.offsetLeft;
-            startY = e.pageY;
-            scrollLeft = inner.scrollLeft;
-            initialScrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            e.preventDefault();
+        let isTeleporting = false;
 
-            // 添加文档级鼠标释放监听，确保任何位置释放都能结束拖动
-            const handleGlobalMouseUp = () => {
-                if (isDragging) {
-                    isDragging = false;
-                    handleDragEnd();
-                }
-                document.removeEventListener('mouseup', handleGlobalMouseUp);
-            };
-            document.addEventListener('mouseup', handleGlobalMouseUp);
-        });
-
-        panel.addEventListener('mousemove', (e) => {
-            // 确保只有左键按住且处于拖动状态才处理
-            if (!isDragging || e.buttons !== 1) return;
-            e.preventDefault();
-            e.stopPropagation();
-            // 计算水平移动距离
-            const x = e.pageX - panel.offsetLeft;
-            const walk = (startX - x) * 1.0;
-            // 阻止垂直滚动
-            if (Math.abs(e.pageY - startY) > 5) {
-                window.scrollTo(0, initialScrollTop);
+        panelInner.addEventListener('scroll', () => {
+            if (isTeleporting) {
+                isTeleporting = false;
+                return;
             }
-            inner.scrollLeft = scrollLeft + walk;
-        });
 
-        // 添加鼠标释放和离开事件监听
-        panel.addEventListener('mouseup', () => {
-            if (isDragging) {
-                isDragging = false;
-                handleDragEnd();
+            const scrollLeft = panelInner.scrollLeft;
+
+            // Teleport to the end of the middle section if scrolling near the start
+            if (scrollLeft < contentWidth) {
+                isTeleporting = true;
+                panelInner.scrollLeft += contentWidth;
             }
-        });
-
-        panel.addEventListener('mouseleave', () => {
-            if (isDragging) {
-                isDragging = false;
-                handleDragEnd();
-            }
-        });
-
-        panel.addEventListener('touchstart', (e) => {
-            const touch = e.touches[0];
-            startX = touch.pageX - panel.offsetLeft;
-            startY = touch.pageY;
-            scrollLeft = inner.scrollLeft;
-            initialScrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            // 移除触摸开始时的默认行为阻止
-        });
-
-        panel.addEventListener('touchmove', (e) => {
-            const touch = e.touches[0];
-            const moveX = Math.abs(touch.pageX - startX);
-            const moveY = Math.abs(touch.pageY - startY);
-
-            // 提高触摸拖动阈值到10px，减少微小移动误判
-            if (moveX > 10 || moveY > 10) {
-                if (!isDragging) {
-                    isDragging = true;
-                    e.preventDefault();
-                }
-
-                const x = touch.pageX - panel.offsetLeft;
-                const walk = (startX - x) * 1.0;
-
-                if (Math.abs(touch.pageY - startY) > 5) {
-                    window.scrollTo(0, initialScrollTop);
-                }
-
-                inner.scrollLeft = scrollLeft + walk;
-            }
-        });
-
-        panel.addEventListener('touchend', () => {
-            if (isDragging) {
-                isDragging = false;
-                handleDragEnd();
-            } else {
-                // 直接处理触摸点击选择逻辑
-                const touch = e.changedTouches[0];
-                const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
-                const target = targetElement.closest('.control-item');
-                if (target) {
-                    const items = Array.from(inner.querySelectorAll('.control-item'));
-                    const index = items.indexOf(target);
-                    if (index !== -1) {
-                        const originalIndex = index % originalCount;
-                        updateSelection(originalIndex);
-                        const containerWidth = inner.clientWidth;
-                        const centeredPos = (containerWidth - itemWidth) / 2;
-                        const targetPosition = originalIndex * itemWidth - centeredPos;
-                        inner.scrollTo({ left: targetPosition, behavior: 'smooth' });
-                    }
-                }
-            }
-        });
-
-        // 添加点击事件委托处理
-        inner.addEventListener('click', (e) => {
-            const target = e.target.closest('.control-item');
-            if (target) {
-                const items = Array.from(inner.querySelectorAll('.control-item'));
-                const index = items.indexOf(target);
-                if (index !== -1) {
-                    // 计算原始索引（考虑无限滚动的重复项）
-                    const originalIndex = index % originalCount;
-                    updateSelection(originalIndex);
-                    // 直接计算滚动位置（替换已删除的getScrollPositionForIndex）
-                    const containerWidth = inner.clientWidth;
-                    const centeredPos = (containerWidth - itemWidth) / 2;
-                    const targetPosition = originalIndex * itemWidth - centeredPos;
-                    inner.scrollTo({ left: targetPosition, behavior: 'smooth' });
-                }
+            // Teleport to the start of the middle section if scrolling near the end
+            else if (scrollLeft >= contentWidth * 2) {
+                isTeleporting = true;
+                panelInner.scrollLeft -= contentWidth;
             }
         });
     });

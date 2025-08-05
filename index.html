@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>呜嘿嘿～是午觉糖水铺的换装立牌预览哦</title>
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@6.5.0/dist/browser/pixi.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="gameContainer"></div>
+    
+    <!-- 标题和随机按钮区域 -->
+    <div class="header-panel">
+        <h1 class="game-title">午觉糖水铺换装立牌</h1>
+        <button class="random-btn" id="randomBtn" title="随机搭配一套服装">
+            <span class="btn-icon">🎲</span>
+            <span class="btn-text">随机搭配</span>
+        </button>
+    </div>
+
+    <div class="control-panel" id="bodyPanel">
+        <div class="panel-label">身体</div>
+        <div class="panel-container">
+            <div class="panel-inner" data-type="body">
+                <!-- 项目将通过JavaScript动态生成 -->
+            </div>
+        </div>
+    </div>
+    <div class="control-panel" id="clothesPanel">
+        <div class="panel-label">服装</div>
+        <div class="panel-container">
+            <div class="panel-inner" data-type="clothes">
+                <!-- 项目将通过JavaScript动态生成 -->
+            </div>
+        </div>
+    </div>
+    <div class="control-panel" id="hairPanel">
+        <div class="panel-label">发型</div>
+        <div class="panel-container">
+            <div class="panel-inner" data-type="hair">
+                <!-- 项目将通过JavaScript动态生成 -->
+            </div>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
